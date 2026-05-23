@@ -1,0 +1,12 @@
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Original source naming (kept locally, only index.html ships)
+denty-landing_1.html
+
+# Internal studio-system docs (not for public repo)
+studio-system/
