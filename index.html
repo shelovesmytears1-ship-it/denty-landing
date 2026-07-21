@@ -80,6 +80,22 @@
     .section-reveal.visible { opacity: 1; transform: translateY(0); }
     /* Keep the product demonstration in the first desktop viewport without
        cropping the mobile composition, where reading space is more valuable. */
+    /* Hero backdrop: the appointment grid the product actually manages,
+       filling itself in behind the copy. Kept low-contrast so the headline
+       stays the thing you read first. */
+    .denty-hero { position: relative; }
+    .denty-hero > * { position: relative; z-index: 1; }
+    .denty-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      /* fade the grid out behind the text column and toward the edges */
+      -webkit-mask-image: radial-gradient(120% 78% at 50% 42%, transparent 22%, #000 72%);
+      mask-image: radial-gradient(120% 78% at 50% 42%, transparent 22%, #000 72%);
+    }
+    .denty-grid canvas { display: block; width: 100%; height: 100%; }
+
     @media (min-width: 769px) {
       .denty-hero {
         height: 100dvh;
@@ -151,6 +167,7 @@
 
     <!-- HERO -->
     <section class="denty-hero pt-40 pb-24 px-6 max-w-6xl mx-auto">
+      <div class="denty-grid" aria-hidden="true"><canvas id="dentyGrid"></canvas></div>
       <div class="text-center max-w-4xl mx-auto">
         <div class="inline-flex items-center gap-2 border border-border rounded-full px-4 py-1.5 text-xs text-muted mb-8 animate-fade-up">
           <span class="ui-dot bg-mint"></span>
@@ -807,6 +824,102 @@
     document.querySelectorAll('.animate-fade-up, .animate-fade-up-2, .animate-fade-up-3, .animate-fade-up-4').forEach(el => {
       el.style.opacity = '1';
     });
+  </script>
+
+  <script>
+    /* Hero backdrop — the appointment grid fills itself in, the way the day
+       fills up in the product. Canvas rather than DOM so a few hundred cells
+       cost one paint; paused off-screen and when the tab is hidden. */
+    (function () {
+      const canvas = document.getElementById('dentyGrid');
+      if (!canvas) return;
+      const host = canvas.parentElement;
+      const ctx = canvas.getContext('2d');
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const MINT = '0, 229, 197';
+      const LINE = '39, 41, 48';
+      const COL_W = 92, ROW_H = 26, GAP = 4;
+
+      let cols = 0, rows = 0, slots = [], t0 = performance.now(), raf = 0, onScreen = false;
+
+      function build() {
+        const w = host.clientWidth, h = host.clientHeight;
+        if (!w || !h) return;
+        const dpr = Math.min(devicePixelRatio || 1, 1.75);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        cols = Math.ceil(w / COL_W) + 1;
+        rows = Math.ceil(h / ROW_H) + 1;
+        slots = [];
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
+            // sparse, clustered around the middle of the day like a real diary
+            const bias = 1 - Math.abs(r / rows - 0.45) * 1.5;
+            if (Math.random() > 0.30 * Math.max(bias, 0.15)) continue;
+            const dur = 1400 + Math.random() * 1600;
+            slots.push({
+              c, r, dur,
+              // a diary is never empty when you open it: about half the slots
+              // are already taken on the first frame, the rest book in as you look
+              at: Math.random() < 0.45 ? -(dur + Math.random() * 2500) : Math.random() * 9000,
+              a: 0.05 + Math.random() * 0.16,
+            });
+          }
+        }
+      }
+
+      function draw(now) {
+        raf = 0;
+        const w = host.clientWidth, h = host.clientHeight;
+        ctx.clearRect(0, 0, w, h);
+
+        // grid rules
+        ctx.strokeStyle = 'rgba(' + LINE + ',0.85)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let c = 0; c <= cols; c++) { const x = Math.round(c * COL_W) + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+        for (let r = 0; r <= rows; r++) { const y = Math.round(r * ROW_H) + 0.5; ctx.moveTo(0, y); ctx.lineTo(w, y); }
+        ctx.stroke();
+
+        const el = reduce ? 1e9 : (now - t0) % 14000;
+
+        for (const s of slots) {
+          let p = (el - s.at) / s.dur;
+          if (p <= 0) continue;
+          p = p > 1 ? 1 : p;
+          const e = 1 - Math.pow(1 - p, 3);           // ease-out
+          const x = s.c * COL_W + GAP;
+          const y = s.r * ROW_H + GAP / 2;
+          const bw = (COL_W - GAP * 2) * e;
+          const bh = ROW_H - GAP;
+          ctx.fillStyle = 'rgba(' + MINT + ',' + (s.a * e).toFixed(3) + ')';
+          ctx.fillRect(x, y, bw, bh);
+          // leading edge catches the light as the block lands
+          if (p < 1) {
+            ctx.fillStyle = 'rgba(' + MINT + ',' + (0.5 * (1 - p)).toFixed(3) + ')';
+            ctx.fillRect(x + bw - 1.5, y, 1.5, bh);
+          }
+        }
+
+        if (!reduce && onScreen && !document.hidden) tick();
+      }
+
+      const tick = () => { if (!raf) raf = requestAnimationFrame(draw); };
+
+      build();
+      // paint the first frame synchronously so the grid is there on load
+      // rather than one animation frame later
+      draw(performance.now());
+      new ResizeObserver(() => { build(); draw(performance.now()); }).observe(host);
+      new IntersectionObserver((es) => {
+        onScreen = es[0].isIntersecting;
+        if (onScreen) tick();
+      }, { threshold: 0.01 }).observe(host);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && onScreen) tick(); });
+    })();
   </script>
 </body>
 </html>
