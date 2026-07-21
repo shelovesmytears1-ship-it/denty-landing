@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
   <title>Denty — CRM dla gabinetów stomatologicznych</title>
   <meta name="description" content="CRM dla stomatologów, który każdy recepcjonista opanuje w jeden dzień. Zarządza pacjentami, automatycznie przypomina o wizytach i pokazuje przychody każdego lekarza.">
   <meta name="theme-color" content="#0C0D0F">
@@ -77,10 +78,44 @@
     .stat-up { color: #00E5C5; }
     .section-reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
     .section-reveal.visible { opacity: 1; transform: translateY(0); }
+    /* Keep the product demonstration in the first desktop viewport without
+       cropping the mobile composition, where reading space is more valuable. */
+    @media (min-width: 769px) {
+      .denty-hero {
+        height: 100dvh;
+        min-height: 100svh;
+        box-sizing: border-box;
+        overflow: hidden;
+        padding-top: clamp(5.25rem, 10vh, 7.5rem) !important;
+        padding-bottom: 1.5rem !important;
+      }
+      .denty-hero > .section-reveal {
+        height: clamp(15rem, 39vh, 28rem);
+        margin-top: clamp(1.25rem, 3vh, 2rem) !important;
+        overflow: hidden;
+      }
+      .denty-hero > .section-reveal .ui-screen {
+        width: 161.3%;
+        max-width: none;
+        margin-left: -30.65%;
+        transform: scale(0.62);
+        transform-origin: top center;
+      }
+    }
     @media (prefers-reduced-motion: reduce) {
       .section-reveal, .animate-fade-up, .animate-fade-up-2, .animate-fade-up-3, .animate-fade-up-4 {
         animation: none !important; opacity: 1 !important; transform: none !important;
       }
+    }
+    /* The dashboard is a visual demo, but its data must remain legible on a phone. */
+    @media (max-width: 640px) {
+      .hero-dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: .5rem !important; margin-bottom: .5rem !important; }
+      .hero-dashboard-stats > div { min-width: 0; padding: .7rem !important; }
+      .hero-dashboard-stats p { overflow-wrap: anywhere; }
+      .hero-dashboard-content { grid-template-columns: minmax(0, 1fr) !important; gap: .5rem !important; }
+      .hero-dashboard-content > * { grid-column: auto !important; min-width: 0; }
+      .hero-dashboard-content .flex-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ui-screen > .p-6 { padding: .75rem; }
     }
   </style>
 </head>
@@ -111,7 +146,7 @@
   <main>
 
     <!-- HERO -->
-    <section class="pt-40 pb-24 px-6 max-w-6xl mx-auto">
+    <section class="denty-hero pt-40 pb-24 px-6 max-w-6xl mx-auto">
       <div class="text-center max-w-4xl mx-auto">
         <div class="inline-flex items-center gap-2 border border-border rounded-full px-4 py-1.5 text-xs text-muted mb-8 animate-fade-up">
           <span class="ui-dot bg-mint"></span>
@@ -148,7 +183,7 @@
             <div class="flex-1 bg-night rounded-md px-3 py-1 text-xs text-muted text-center" style="max-width: 300px; margin: 0 auto;">app.denty.pl/dashboard</div>
           </div>
           <div class="p-6" style="background: #141518;">
-            <div class="grid grid-cols-4 gap-3 mb-6">
+            <div class="grid grid-cols-4 gap-3 mb-6 hero-dashboard-stats">
               <div class="bg-card rounded-xl p-4 border border-border">
                 <p class="text-xs text-muted mb-1">Pacjenci dziś</p>
                 <p class="font-display font-700 text-2xl text-white">24</p>
@@ -170,7 +205,7 @@
                 <p class="text-xs stat-up mt-1">↓ było 17%</p>
               </div>
             </div>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-3 gap-3 hero-dashboard-content">
               <div class="col-span-2 bg-card rounded-xl border border-border overflow-hidden">
                 <div class="px-4 py-3 border-b border-border flex items-center justify-between">
                   <span class="text-sm font-display font-600 text-white">Harmonogram — dziś</span>
